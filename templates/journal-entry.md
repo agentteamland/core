@@ -1,18 +1,18 @@
 ---
 date: {YYYY-MM-DD}
 agent: {agent-name}
-tags: [learning, {kategori}]
+tags: [learning, {category}]
 ---
 
-## Özet
+## Summary
 
-{Bu sohbette ne yapıldı, tek paragraf}
+{What was done in this conversation, single paragraph}
 
-## Öğrenilenler
+## Learnings
 
-- {öğrenme 1}
-- {öğrenme 2}
+- {learning 1}
+- {learning 2}
 
-## Diğer Agent'lar İçin Notlar
+## Notes for Other Agents
 
-- {varsa cross-cutting bilgiler, yoksa bu bölüm kaldırılır}
+- {cross-cutting information if any, remove this section if none}

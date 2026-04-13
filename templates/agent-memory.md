@@ -1,21 +1,21 @@
-# {Agent Name} — Proje Memory
+# {Agent Name} — Project Memory
 
-> Bu dosya `/save-learnings` tarafından otomatik güncellenir.
-> Proje: {proje adı}
-> Son güncelleme: {tarih}
+> This file is automatically updated by `/save-learnings`.
+> Project: {project name}
+> Last updated: {date}
 
-## İşe Yarayan Pattern'ler
+## Patterns That Worked
 
-<!-- Kanıtlanmış, tekrar kullanılabilir pattern'ler -->
+<!-- Proven, reusable patterns -->
 
-## İşe Yaramayan Pattern'ler
+## Patterns That Didn't Work
 
-<!-- Denenmiş ve sorun çıkarmış yaklaşımlar -->
+<!-- Approaches that were tried and caused problems -->
 
-## Ortaya Çıkan Pattern'ler
+## Emerging Patterns
 
-<!-- Henüz kesinleşmemiş, gözlemlenen eğilimler -->
+<!-- Not yet finalized, observed tendencies -->
 
-## Süreç İyileştirmeleri
+## Process Improvements
 
-<!-- Agent'ın kendi workflow'unda yapılan değişiklikler -->
+<!-- Changes made in the agent's own workflow -->

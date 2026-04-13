@@ -1,54 +1,54 @@
-# Memory & Journal Sistemi Kuralları
+# Memory & Journal System Rules
 
-## İki Katmanlı Hafıza
+## Two-Layer Memory
 
-### Proje Memory (proje özel)
-**Konum:** `.claude/agent-memory/{agent-name}-memory.md`
+### Project Memory (project-specific)
+**Location:** `.claude/agent-memory/{agent-name}-memory.md`
 
-Her projede, her agent'ın kendi memory dosyası olabilir. Bu dosya o projede öğrenilenleri saklar. Agent sohbet başında bu dosyayı okur.
+Each project can have its own memory file for each agent. This file stores what was learned in that project. The agent reads this file at the start of a conversation.
 
-**Kurallar:**
-- Agent sohbet başında kendi memory dosyasını okumalı (varsa)
-- Sadece `/save-learnings` ile güncellenir (elle düzenleme de mümkün)
-- Proje bazlı — farklı projelerde farklı memory'ler
-- Format: tarih başlıklı, kategorize (işe yarayan/yaramayan/ortaya çıkan)
+**Rules:**
+- The agent should read its own memory file at the start of a conversation (if it exists)
+- Updated only via `/save-learnings` (manual editing is also possible)
+- Project-based — different projects have different memories
+- Format: date-headed, categorized (what worked / what didn't work / emerging)
 
-### Team Bilgi Tabanı (global)
-**Konum:** `~/agent-teams/{team}/agents/{agent}.md`
+### Team Knowledge Base (global)
+**Location:** `~/agent-teams/{team}/agents/{agent}.md`
 
-Agent'ın tüm projelerde geçerli olan bilgisi. Nadiren değişir ama her projeden öğrenilenler buraya da eklenebilir.
+The agent's knowledge that applies across all projects. Rarely changes but learnings from any project can be added here as well.
 
-**Kurallar:**
-- `/save-learnings` ile "tüm projeler" seçilirse güncellenir
-- Güncelleme sonrası otomatik git commit + push
-- Bu dosya symlink üzerinden `~/.claude/agents/` altından erişilir
+**Rules:**
+- Updated when "all projects" is selected via `/save-learnings`
+- Automatic git commit + push after update
+- This file is accessed via symlink from `~/.claude/agents/`
 
-## Journal (agent'lar arası paylaşım)
+## Journal (cross-agent sharing)
 
-**Konum:** `.claude/journal/{tarih}_{agent-name}.md`
+**Location:** `.claude/journal/{date}_{agent-name}.md`
 
-Agent'lar arası bilgi paylaşımı. Bir agent bir şey keşfettiğinde journal'a yazar, diğer agent'lar sonraki sohbetlerde okur.
+Information sharing between agents. When an agent discovers something, it writes to the journal; other agents read it in subsequent conversations.
 
-**Kurallar:**
-- Her agent journal'ı okuyabilir
-- Her agent kendi adıyla journal'a yazabilir
-- Journal dosyaları silinmez (tarihsel kayıt)
-- Tarih bazlı dosya adı: `2026-04-13_api-agent.md`
-- Journal brainsstorm dosyalarından farklıdır — journal kısa notlar, brainstorm uzun tartışmalar
+**Rules:**
+- Every agent can read the journal
+- Every agent can write to the journal under its own name
+- Journal files are never deleted (historical record)
+- Date-based file name: `2026-04-13_api-agent.md`
+- Journal is different from brainstorm files — journal contains short notes, brainstorm contains long discussions
 
-## Agent Başlangıç Rutini
+## Agent Startup Routine
 
-Her sohbet başında agent şu dosyaları okumalı (varsa):
+At the start of every conversation, the agent should read the following files (if they exist):
 
-1. Kendi agent dosyası (team'den, symlink üzerinden)
-2. Proje memory: `.claude/agent-memory/{agent-name}-memory.md`
-3. Son journal kayıtları: `.claude/journal/` (son 5-10 kayıt)
-4. Proje özel kurallar: `.claude/docs/coding-standards/{app}.md`
+1. Its own agent file (from team, via symlink)
+2. Project memory: `.claude/agent-memory/{agent-name}-memory.md`
+3. Recent journal entries: `.claude/journal/` (last 5-10 entries)
+4. Project-specific rules: `.claude/docs/coding-standards/{app}.md`
 
-## Sohbet Sonu Rutini
+## End of Conversation Routine
 
-Her sohbet sonunda `/save-learnings` çağrılması teşvik edilir. Bu:
-1. Sohbetten öğrenilenleri çıkarır
-2. Kullanıcı onayıyla proje memory'ye ve/veya team repo'ya yazar
-3. Journal'a not düşer
-4. Team repo güncellendiyse otomatik push eder
+Calling `/save-learnings` at the end of every conversation is encouraged. This:
+1. Extracts learnings from the conversation
+2. Writes to project memory and/or team repo with user confirmation
+3. Adds a note to the journal
+4. Automatically pushes if team repo was updated

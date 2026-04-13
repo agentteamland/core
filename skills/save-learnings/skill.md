@@ -1,116 +1,116 @@
 ---
 name: save-learnings
-description: "Sohbet sonunda öğrenilenleri kaydet. Proje özel bilgiler agent-memory'ye, genel bilgiler team repo'sundaki agent dosyasına yazılır ve otomatik push edilir."
+description: "Save learnings at the end of a conversation. Project-specific information is written to agent-memory, general information is written to the agent file in the team repo and automatically pushed."
 argument-hint: "[agent-name]"
 ---
 
 # /save-learnings Skill
 
-## Amaç
+## Purpose
 
-Her sohbet sonunda çağrılır. Bu sohbette öğrenilen şeyleri (yeni pattern, anti-pattern, keşif, hata dersi) kalıcı hale getirir. Böylece sonraki sohbetlerde agent daha akıllı olur.
+Called at the end of each conversation. Persists things learned during this conversation (new patterns, anti-patterns, discoveries, lessons from mistakes). This way the agent becomes smarter in subsequent conversations.
 
-## Akış
+## Flow
 
-### 1. Aktif Agent'ı Belirle
+### 1. Identify the Active Agent
 
-Argüman olarak agent adı verilmişse onu kullan. Verilmemişse, bu sohbette hangi agent ile çalışıldığını bağlamdan çıkar (hangi dosyalar düzenlendi, hangi dizinlere dokunuldu).
+If an agent name is given as an argument, use it. If not, infer from context which agent was working in this conversation (which files were edited, which directories were touched).
 
-### 2. Sohbeti Analiz Et
+### 2. Analyze the Conversation
 
-Bu sohbette neler öğrenildi? Şu kategorilere göre tara:
+What was learned in this conversation? Scan according to these categories:
 
-- **İşe yarayan pattern'ler** — "Bunu şöyle yaptık ve iyi çalıştı"
-- **İşe yaramayan pattern'ler** — "Bunu denedik ama sorun çıktı, şu yüzden"
-- **Ortaya çıkan pattern'ler** — "Henüz kesin değil ama şu eğilim var"
-- **Süreç iyileştirmeleri** — "Agent'ın workflow'unda şu adım eksikti / fazlaydı"
-- **Yeni kurallar** — "Bundan sonra şunu her zaman yapmalıyız / yapmamalıyız"
+- **Patterns that worked** — "We did it this way and it worked well"
+- **Patterns that didn't work** — "We tried this but it caused problems, because of this reason"
+- **Emerging patterns** — "Not certain yet but there's this tendency"
+- **Process improvements** — "This step was missing / unnecessary in the agent's workflow"
+- **New rules** — "From now on we should always / never do this"
 
-### 3. Kullanıcıya Özetle ve Onayla
+### 3. Summarize and Confirm with User
 
-Bulunan öğrenmeleri kullanıcıya göster ve sor:
+Show the found learnings to the user and ask:
 
 ```
-Bu sohbette şunları öğrendik:
+We learned the following in this conversation:
 
-1. [İşe yarayan] EF Core'da Include chain 3'ten fazla olunca projection kullanmak lazım
-2. [Anti-pattern] Redis'te 1MB'den büyük value saklamak timeout'a neden oluyor
-3. [Süreç] Consumer'lar kendi topology'lerini declare etmeli
+1. [Worked] When EF Core Include chains exceed 3, projection should be used
+2. [Anti-pattern] Storing values larger than 1MB in Redis causes timeouts
+3. [Process] Consumers should declare their own topologies
 
-Bunları kaydedeyim mi? Her biri için:
-- Sadece bu proje (memory)
-- Tüm projeler (team repo)
-- Kaydetme (atla)
+Should I save these? For each one:
+- This project only (memory)
+- All projects (team repo)
+- Don't save (skip)
 ```
 
-AskUserQuestion ile her öğrenme için seçenek sun.
+Offer options for each learning using AskUserQuestion.
 
-### 4. Proje Memory'ye Yaz (proje özel olanlar)
+### 4. Write to Project Memory (project-specific ones)
 
-Dosya: `.claude/agent-memory/{agent-name}-memory.md`
+File: `.claude/agent-memory/{agent-name}-memory.md`
 
-Yoksa oluştur. Varsa append et. Format:
+Create if it doesn't exist. If it exists, append. Format:
 
 ```markdown
-## {Tarih}
+## {Date}
 
-### İşe Yarayan
-- {öğrenme} — Kanıt: {ne oldu}
+### What Worked
+- {learning} — Evidence: {what happened}
 
-### İşe Yaramayan
-- {öğrenme} — Kanıt: {ne oldu}
+### What Didn't Work
+- {learning} — Evidence: {what happened}
 
-### Ortaya Çıkan Pattern'ler
-- {gözlem} — Henüz doğrulanmadı
+### Emerging Patterns
+- {observation} — Not yet verified
 ```
 
-### 5. Team Repo'ya Yaz (genel olanlar)
+### 5. Write to Team Repo (general ones)
 
-Agent dosyası symlink üzerinden düzenlenir — aslında `~/agent-teams/{team}/agents/{agent}.md` güncellenir.
+The agent file is edited via symlink — it actually updates `~/agent-teams/{team}/agents/{agent}.md`.
 
-Yapılacak güncelleme türleri:
-- **Yeni kural** → agent dosyasındaki ilgili bölüme ekle
-- **Yeni pattern** → ilgili children bölümüne ekle
-- **Workflow güncellemesi** → workflow adımlarını güncelle
+Types of updates to make:
+- **New rule** — Add to the relevant section in the agent file
+- **New pattern** — Add to the relevant children section
+- **Workflow update** — Update the workflow steps
 
-### 6. Team Repo'yu Push Et (genel güncelleme varsa)
+### 6. Push Team Repo (if there's a general update)
 
 ```bash
 cd ~/agent-teams/{team-name}
 git add -A
-git commit -m "learn: {kısa öğrenme özeti}"
+git commit -m "learn: {short learning summary}"
 git push
 ```
 
-Kullanıcıya bildir: "Team repo güncellendi ve push edildi."
+Notify the user: "Team repo updated and pushed."
 
-### 7. Journal'a Yaz (varsa)
+### 7. Write to Journal (if available)
 
-Eğer core'un journal sistemi aktifse, öğrenmeleri journal'a da yaz — diğer agent'lar faydalanabilsin.
+If the core's journal system is active, also write learnings to the journal — so other agents can benefit.
 
-Dosya: `.claude/journal/{tarih}_{agent-name}.md`
+File: `.claude/journal/{date}_{agent-name}.md`
 
 ```markdown
 ---
-date: {tarih}
+date: {date}
 agent: {agent-name}
-tags: [learning, {kategori}]
+tags: [learning, {category}]
 ---
 
-## Öğrenilenler
+## Learnings
 
-- {öğrenme listesi}
+- {learning list}
 
-## Diğer Agent'lar İçin Notlar
+## Notes for Other Agents
 
-- {varsa cross-cutting bilgiler}
+- {cross-cutting information if any}
 ```
 
-## Önemli Kurallar
+## Important Rules
 
-1. **Her sohbet sonunda çağrılabilir.** Zorunlu değil ama teşvik edilir.
-2. **Kullanıcı onayı olmadan yazmaz.** Öğrenmeleri göster, onayla, sonra yaz.
-3. **Git push otomatik.** Team repo güncellemesi varsa commit + push yapılır.
-4. **Proje memory dosyası yoksa oluşturulur.** İlk sohbette boş başlar.
-5. **Üzerine yazmaz, append eder.** Tarih başlığıyla eklenir.
-6. **Hassas bilgi kontrolü.** Password, token, secret gibi bilgiler memory'ye yazılmaz.
+1. **Can be called at the end of every conversation.** Not mandatory but encouraged.
+2. **Does not write without user confirmation.** Show learnings, confirm, then write.
+3. **Git push is automatic.** If there's a team repo update, commit + push is performed.
+4. **Project memory file is created if it doesn't exist.** Starts empty on the first conversation.
+5. **Does not overwrite, appends.** Added with a date heading.
+6. **Sensitive information check.** Information like passwords, tokens, secrets are not written to memory.
