@@ -102,7 +102,24 @@ When a repeating workflow is identified (same sequence of steps done 2+ times), 
 
 With frontmatter (name, description) and the step-by-step workflow captured from the conversation.
 
-### 7. Push Team Repo
+### 7. Update Project Wiki
+
+For each learning, determine its topic and update the relevant wiki page:
+
+```
+Learning: "Redis TTL should be 30 min not 15"
+  → Topic: caching
+  → Wiki page: .claude/wiki/caching-patterns.md
+  → Action: UPDATE (replace "15 min" with "30 min" if it exists, or add new entry)
+```
+
+- If `.claude/wiki/` exists → update relevant pages, create new pages for new topics
+- If `.claude/wiki/` doesn't exist → create it with `index.md` + first pages
+- Update `index.md` with any new pages
+- Update cross-references between related pages
+- Wiki pages reflect **current truth** — if something changed, old info is replaced, not appended
+
+### 8. Push Team Repo
 
 If any team repo files were modified (children, rules, agent.md, known-issues):
 
@@ -144,8 +161,9 @@ Show a brief summary of everything that was done:
 ```
 📝 Learnings saved:
   • Project memory: 3 entries added
+  • Wiki: 2 pages updated (caching-patterns.md, ef-core-setup.md)
+  • Wiki: 1 new page created (batch-processing.md)
   • Team repo: 1 children file updated (caching-strategy.md)
-  • Team repo: 1 new children file created (batch-processing.md)
   • New rule created: "batch-imports-use-bulk-insert" (team)
   • Journal entry written
   • Team repo pushed (v1.1.0)
