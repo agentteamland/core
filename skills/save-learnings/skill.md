@@ -1,6 +1,6 @@
 ---
 name: save-learnings
-description: "Save learnings at the end of a conversation. Project-specific information is written to agent-memory, general information is written to the agent file in the team repo and automatically pushed."
+description: "Save learnings at the end of a conversation. Automatically writes to project memory, team repo, and journal. Can auto-create new skills, agent children files, and rules when patterns are discovered. No confirmation needed — acts autonomously."
 argument-hint: "[agent-name]"
 ---
 
@@ -8,7 +8,7 @@ argument-hint: "[agent-name]"
 
 ## Purpose
 
-Called at the end of each conversation. Persists things learned during this conversation (new patterns, anti-patterns, discoveries, lessons from mistakes). This way the agent becomes smarter in subsequent conversations.
+Called at the end of each conversation (or triggered by the memory-system rule automatically). Persists everything learned — patterns, anti-patterns, discoveries, process improvements. Also **auto-creates new skills, children files, and rules** when repeating patterns are detected. No user confirmation needed — acts autonomously and reports what was done.
 
 ## Flow
 
@@ -18,38 +18,36 @@ If an agent name is given as an argument, use it. If not, infer from context whi
 
 ### 2. Analyze the Conversation
 
-What was learned in this conversation? Scan according to these categories:
+Scan for learnings in these categories:
 
 - **Patterns that worked** — "We did it this way and it worked well"
-- **Patterns that didn't work** — "We tried this but it caused problems, because of this reason"
+- **Patterns that didn't work** — "We tried this but it caused problems"
 - **Emerging patterns** — "Not certain yet but there's this tendency"
 - **Process improvements** — "This step was missing / unnecessary in the agent's workflow"
 - **New rules** — "From now on we should always / never do this"
+- **Repeating workflows** — "We did this same sequence of steps again" → **auto-create skill or children**
+- **New conventions** — "We established a naming/structure convention" → **auto-create rule**
 
-### 3. Summarize and Confirm with User
+### 3. Auto-Save (No Confirmation)
 
-Show the found learnings to the user and ask:
+**Do NOT ask for confirmation.** Analyze, decide, save, report. The user should see a summary of what was done, not be asked what to do.
 
-```
-We learned the following in this conversation:
+Decision logic for each learning:
 
-1. [Worked] When EF Core Include chains exceed 3, projection should be used
-2. [Anti-pattern] Storing values larger than 1MB in Redis causes timeouts
-3. [Process] Consumers should declare their own topologies
+| Learning Type | Where It Goes | Auto-Create |
+|--------------|---------------|-------------|
+| Project-specific pattern | `.claude/agent-memory/{agent}-memory.md` | — |
+| General pattern (all projects) | Team repo agent/children file | — |
+| Repeating workflow (done 2+ times) | Team repo | ✅ New children file |
+| New convention/standard | Team repo or project rules | ✅ New rule (via /rule) |
+| Reusable procedure | Project `.claude/skills/` | ✅ New skill |
+| Bug fix / known issue | Team repo `known-issues.md` | ✅ Append to known-issues |
 
-Should I save these? For each one:
-- This project only (memory)
-- All projects (team repo)
-- Don't save (skip)
-```
-
-Offer options for each learning using AskUserQuestion.
-
-### 4. Write to Project Memory (project-specific ones)
+### 4. Write to Project Memory
 
 File: `.claude/agent-memory/{agent-name}-memory.md`
 
-Create if it doesn't exist. If it exists, append. Format:
+Create if it doesn't exist. Append with date heading:
 
 ```markdown
 ## {Date}
@@ -64,29 +62,58 @@ Create if it doesn't exist. If it exists, append. Format:
 - {observation} — Not yet verified
 ```
 
-### 5. Write to Team Repo (general ones)
+### 5. Write to Team Repo (General Learnings)
 
-The agent file is edited via symlink — it actually updates `~/.claude/repos/mkurak/{team}/agents/{agent}.md`.
+The agent file is edited via symlink — updates `~/.claude/repos/mkurak/{team}/agents/{agent}/...`.
 
-Types of updates to make:
-- **New rule** — Add to the relevant section in the agent file
-- **New pattern** — Add to the relevant children section
-- **Workflow update** — Update the workflow steps
+Types of updates:
+- **Existing children file** → append the new learning to the relevant section
+- **New children file** → create if the topic doesn't fit any existing children (e.g., a completely new pattern area)
+- **Known issues** → append to `children/known-issues.md`
+- **Agent.md knowledge base** → add summary + link if new children file was created
 
-### 6. Push Team Repo (if there's a general update)
+### 6. Auto-Create New Artifacts
+
+#### Auto-Create Children File
+When a new topic area emerges that doesn't fit existing children:
+
+```bash
+# Create new children file in team repo
+echo "{content}" > ~/.claude/repos/mkurak/{team}/agents/{agent}/children/{topic}.md
+```
+
+Update agent.md's Knowledge Base section with summary + detail link.
+
+#### Auto-Create Rule
+When a convention or standard is established, invoke the `/rule` skill internally:
+
+```
+/rule --team {the convention in natural language}
+```
+
+This writes a structured rule to the team repo (or project rules if project-specific).
+
+#### Auto-Create Skill
+When a repeating workflow is identified (same sequence of steps done 2+ times), create a skill:
+
+```
+.claude/skills/{skill-name}/skill.md
+```
+
+With frontmatter (name, description) and the step-by-step workflow captured from the conversation.
+
+### 7. Push Team Repo
+
+If any team repo files were modified (children, rules, agent.md, known-issues):
 
 ```bash
 cd ~/.claude/repos/mkurak/{team-name}
 git add -A
-git commit -m "learn: {short learning summary}"
+git commit -m "learn: {short summary of all learnings}"
 git push
 ```
 
-Notify the user: "Team repo updated and pushed."
-
-### 7. Write to Journal (if available)
-
-If the core's journal system is active, also write learnings to the journal — so other agents can benefit.
+### 8. Write to Journal
 
 File: `.claude/journal/{date}_{agent-name}.md`
 
@@ -94,23 +121,45 @@ File: `.claude/journal/{date}_{agent-name}.md`
 ---
 date: {date}
 agent: {agent-name}
-tags: [learning, {category}]
+tags: [learning, {categories}]
 ---
 
-## Learnings
+## Summary
+{What was done in this conversation}
 
+## Learnings
 - {learning list}
 
-## Notes for Other Agents
+## Auto-Created
+- {list of new files/skills/rules created, if any}
 
+## Notes for Other Agents
 - {cross-cutting information if any}
 ```
 
+### 9. Report to User
+
+Show a brief summary of everything that was done:
+
+```
+📝 Learnings saved:
+  • Project memory: 3 entries added
+  • Team repo: 1 children file updated (caching-strategy.md)
+  • Team repo: 1 new children file created (batch-processing.md)
+  • New rule created: "batch-imports-use-bulk-insert" (team)
+  • Journal entry written
+  • Team repo pushed (v1.1.0)
+```
+
+One block, no interaction, conversation continues (or ends).
+
 ## Important Rules
 
-1. **Can be called at the end of every conversation.** Not mandatory but encouraged.
-2. **Does not write without user confirmation.** Show learnings, confirm, then write.
-3. **Git push is automatic.** If there's a team repo update, commit + push is performed.
-4. **Project memory file is created if it doesn't exist.** Starts empty on the first conversation.
-5. **Does not overwrite, appends.** Added with a date heading.
-6. **Sensitive information check.** Information like passwords, tokens, secrets are not written to memory.
+1. **NO confirmation asked.** Analyze → save → report. User sees the result, not a question.
+2. **Auto-create is safe.** New children files, rules, and skills don't break anything — they add knowledge.
+3. **Git push is automatic.** Team repo changes are committed and pushed immediately.
+4. **Sensitive information filter.** Passwords, tokens, secrets, API keys are NEVER written anywhere.
+5. **Append, never overwrite.** Existing files get new content appended, never replaced.
+6. **De-duplicate.** Check if a similar learning already exists before adding. Don't create duplicate children or rules.
+7. **Skill creation threshold.** Only create a skill when the same workflow pattern appears 2+ times. One-time procedures go to memory, not skills.
+8. **Rule creation criteria.** Only create a rule when a clear "always do X" or "never do Y" convention is established. Observations go to memory, conventions go to rules.
