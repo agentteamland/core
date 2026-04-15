@@ -1,0 +1,5 @@
+{
+  "name": "core",
+  "version": "1.0.0",
+  "description": "Core infrastructure for all agent teams — memory system, journal, version check, learning pipeline"
+}
