@@ -23,7 +23,7 @@ Core is installed automatically by `install.sh` (bootstrap). No manual installat
 
 ```
 Team Repo (global knowledge)                    Project Memory (project-specific)
-~/.claude/repos/mkurak/{team}/agents/agent.md    .claude/agent-memory/{agent}-memory.md
+~/.claude/repos/agentteamland/{team}/agents/agent.md    .claude/agent-memory/{agent}-memory.md
 ├── Patterns that work everywhere                ├── What worked in THIS project
 ├── Anti-patterns to avoid                       ├── Project-specific discoveries
 └── Updated via /save-learnings + auto push      └── Updated via /save-learnings (stays local)
@@ -53,7 +53,7 @@ Session End:
 ### Automatic Version Check
 
 On every prompt, the version-check rule silently:
-1. Runs `git fetch` on all cached repos in `~/.claude/repos/mkurak/`
+1. Runs `git fetch` on all cached repos in `~/.claude/repos/agentteamland/`
 2. If behind origin → auto `git pull`
 3. Brief one-liner notification if updated (e.g., "🔄 software-team v1.0.0→v1.1.0")
 4. Completely silent if no updates

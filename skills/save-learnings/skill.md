@@ -64,7 +64,7 @@ Create if it doesn't exist. Append with date heading:
 
 ### 5. Write to Team Repo (General Learnings)
 
-The agent file is edited via symlink — updates `~/.claude/repos/mkurak/{team}/agents/{agent}/...`.
+The agent file is edited via symlink — updates `~/.claude/repos/agentteamland/{team}/agents/{agent}/...`.
 
 Types of updates:
 - **Existing children file** → append the new learning to the relevant section
@@ -79,7 +79,7 @@ When a new topic area emerges that doesn't fit existing children:
 
 ```bash
 # Create new children file in team repo
-echo "{content}" > ~/.claude/repos/mkurak/{team}/agents/{agent}/children/{topic}.md
+echo "{content}" > ~/.claude/repos/agentteamland/{team}/agents/{agent}/children/{topic}.md
 ```
 
 Update agent.md's Knowledge Base section with summary + detail link.
@@ -124,7 +124,7 @@ Learning: "Redis TTL should be 30 min not 15"
 If any team repo files were modified (children, rules, agent.md, known-issues):
 
 ```bash
-cd ~/.claude/repos/mkurak/{team-name}
+cd ~/.claude/repos/agentteamland/{team-name}
 git add -A
 git commit -m "learn: {short summary of all learnings}"
 git push
