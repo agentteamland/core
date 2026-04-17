@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "core",
   "version": "1.0.0",
-  "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, version check, learning pipeline, verification",
+  "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, version check, learning pipeline, schema definitions",
   "author": {
     "name": "AgentTeamLand",
     "url": "https://github.com/agentteamland"
@@ -14,7 +14,6 @@
   "agents": [],
   "skills": [
     { "name": "save-learnings", "description": "Save end-of-conversation learnings to project memory, team repo, and journal" },
-    { "name": "verify-system", "description": "4-level end-to-end health check (containers, ports, app health, pipelines)" },
     { "name": "create-code-diagram", "description": "Generate full project Mermaid class diagram" },
     { "name": "wiki", "description": "Living project knowledge base (ingest, query, lint)" }
   ],
