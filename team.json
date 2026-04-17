@@ -1,5 +1,32 @@
 {
+  "schemaVersion": 1,
   "name": "core",
   "version": "1.0.0",
-  "description": "Core infrastructure for all agent teams — memory system, journal, version check, learning pipeline"
+  "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, version check, learning pipeline, verification",
+  "author": {
+    "name": "AgentTeamLand",
+    "url": "https://github.com/agentteamland"
+  },
+  "license": "MIT",
+  "keywords": ["core", "memory", "journal", "rules", "infrastructure"],
+  "repository": "https://github.com/agentteamland/core",
+  "homepage": "https://github.com/agentteamland",
+  "agents": [],
+  "skills": [
+    { "name": "save-learnings", "description": "Save end-of-conversation learnings to project memory, team repo, and journal" },
+    { "name": "verify-system", "description": "4-level end-to-end health check (containers, ports, app health, pipelines)" },
+    { "name": "create-code-diagram", "description": "Generate full project Mermaid class diagram" },
+    { "name": "wiki", "description": "Living project knowledge base (ingest, query, lint)" }
+  ],
+  "rules": [
+    { "name": "memory-system", "description": "4-layer knowledge model (memory, journal, wiki, docs)" },
+    { "name": "agent-structure", "description": "Children pattern + Knowledge Base + Blueprint pattern for agents" },
+    { "name": "version-check", "description": "Auto-pull agentteamland repos on every prompt" }
+  ],
+  "extends": null,
+  "excludes": [],
+  "dependencies": {},
+  "requires": {
+    "atl": ">=0.1.0"
+  }
 }

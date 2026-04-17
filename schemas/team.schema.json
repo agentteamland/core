@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/agentteamland/core/main/schemas/team.schema.json",
+  "title": "AgentTeamLand Team Manifest",
+  "description": "Schema for team.json — the manifest of an AgentTeamLand team package. Every team repository MUST have a team.json at its root that validates against this schema.",
+  "type": "object",
+  "required": ["schemaVersion", "name", "version", "description"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "description": "Schema version number. Current: 1.",
+      "const": 1
+    },
+    "name": {
+      "description": "Package name. Must be kebab-case, 3-40 chars, lowercase alphanumeric + hyphens. Must be unique in the registry.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,38}[a-z0-9]$"
+    },
+    "version": {
+      "description": "SemVer version (MAJOR.MINOR.PATCH). E.g. '1.0.0', '0.2.3-beta.1'.",
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "description": {
+      "description": "One-sentence description of what this team does. Shown in the registry catalog.",
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200
+    },
+    "author": {
+      "description": "Author or maintainer of the team.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url":  { "type": "string", "format": "uri" },
+        "email": { "type": "string", "format": "email" }
+      }
+    },
+    "license": {
+      "description": "SPDX license identifier (e.g. 'MIT', 'Apache-2.0', 'ISC', 'UNLICENSED').",
+      "type": "string",
+      "minLength": 2
+    },
+    "keywords": {
+      "description": "Search keywords for the registry. Kebab-case recommended.",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 40 },
+      "maxItems": 20,
+      "uniqueItems": true
+    },
+    "repository": {
+      "description": "Git URL of this team's repository. MUST match the actual clone URL.",
+      "type": "string",
+      "pattern": "^https://|^git@|^ssh://"
+    },
+    "homepage": {
+      "description": "Optional homepage URL (docs site, landing page).",
+      "type": "string",
+      "format": "uri"
+    },
+    "agents": {
+      "description": "List of agents this team provides. Each agent lives in agents/{name}/agent.md (+ children/).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Agent name (matches directory name under agents/).",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": { "type": "string", "maxLength": 200 },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "uniqueItems": true
+          }
+        }
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "skills": {
+      "description": "List of skills this team provides. Each skill lives in skills/{name}/skill.md.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "description": { "type": "string", "maxLength": 200 }
+        }
+      },
+      "default": []
+    },
+    "rules": {
+      "description": "List of rules this team provides. Each rule lives in rules/{name}.md.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "description": { "type": "string", "maxLength": 200 }
+        }
+      },
+      "default": []
+    },
+    "extends": {
+      "description": "Parent team name + version constraint (e.g. 'software-project-team@^1.0.0'). Parent's agents/skills/rules are inherited; children override by name. Use null for no parent.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*@(\\^|~|>=|<=|>|<|=)?[0-9].*$"
+        }
+      ]
+    },
+    "excludes": {
+      "description": "Names of agents/skills/rules from the parent (transitively) to exclude from installation. Useful for opting out of an inherited agent you don't want.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+      "uniqueItems": true,
+      "default": []
+    },
+    "dependencies": {
+      "description": "Packages this team depends on (other than the parent via 'extends'). Keys are package names, values are version constraints. Core is usually listed here.",
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "type": "string",
+          "pattern": "^(\\^|~|>=|<=|>|<|=)?[0-9].*$"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "requires": {
+      "description": "Minimum tooling versions required.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "atl": {
+          "description": "Minimum atl CLI version (or any constraint).",
+          "type": "string",
+          "pattern": "^(\\^|~|>=|<=|>|<|=)?[0-9].*$"
+        }
+      }
+    }
+  }
+}
