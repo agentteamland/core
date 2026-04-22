@@ -122,13 +122,13 @@ If the stack binds many ports, offer a `+10000` offset option so the project doe
 When the scaffolder finishes, emit a single summary block:
 
 ```
-🎯 WalkingForMe scaffolded.
+🎯 ExampleApp scaffolded.
 
 Stack: .NET 9 API + Flutter mobile + React admin panel
 Infrastructure: 16 Docker services (postgres, rabbitmq, redis, elasticsearch, kibana, mailpit, minio, adminer, redis-ui, 5 .NET hosts, React Vite dev server)
 Verification: /verify-system ALL PASS (4 levels, 7 pipelines)
 
-Test credentials: admin@walkingforme.local / Admin123!
+Test credentials: admin@example-app.local / Admin123!
 
 Next: open the URLs from CLAUDE.md, start building features.
 ```
