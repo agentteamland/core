@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "core",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, version check, learning pipeline, schema definitions",
   "author": {
     "name": "AgentTeamLand",
