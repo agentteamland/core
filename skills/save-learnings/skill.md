@@ -1,14 +1,22 @@
 ---
 name: save-learnings
-description: "Save learnings at the end of a conversation. Automatically writes to project memory, team repo, and journal. Can auto-create new skills, agent children files, and rules when patterns are discovered. No confirmation needed — acts autonomously."
-argument-hint: "[agent-name]"
+description: "Save learnings at the end of a conversation. Automatically writes to project memory, wiki (mandatory), team repo, and journal. Can auto-create new skills, agent children files, and rules when patterns are discovered. Supports --from-markers mode for hook-driven invocation. No confirmation needed — acts autonomously."
+argument-hint: "[agent-name] [--from-markers]"
 ---
 
 # /save-learnings Skill
 
 ## Purpose
 
-Called at the end of each conversation (or triggered by the memory-system rule automatically). Persists everything learned — patterns, anti-patterns, discoveries, process improvements. Also **auto-creates new skills, children files, and rules** when repeating patterns are detected. No user confirmation needed — acts autonomously and reports what was done.
+Called at the end of each conversation (manually, or automatically by the `atl learning-capture` hook when inline `<!-- learning -->` markers are present). Persists everything learned — patterns, anti-patterns, discoveries, process improvements. Also **auto-creates new skills, children files, and rules** when repeating patterns are detected. No user confirmation needed — acts autonomously and reports what was done.
+
+## Two invocation modes
+
+**Manual mode (user-initiated):** `/save-learnings [agent-name]` — full transcript is analyzed for learnings, every category scanned.
+
+**Marker mode (hook-initiated):** `/save-learnings --from-markers` — only the content inside `<!-- learning ... -->` blocks in the transcript is processed. This is cheaper (less context to re-analyze) and is the default path when `atl setup-hooks` drives end-of-session capture. See [learning-capture rule](../../rules/learning-capture.md) for the marker format.
+
+In marker mode, skip steps 1-2 (agent detection + analysis) and jump straight to categorizing the marker bodies.
 
 ## Flow
 
@@ -102,35 +110,45 @@ When a repeating workflow is identified (same sequence of steps done 2+ times), 
 
 With frontmatter (name, description) and the step-by-step workflow captured from the conversation.
 
-### 7. Update Project Wiki
+### 7. Update Project Wiki — MANDATORY
 
-For each learning, determine its topic and update the relevant wiki page:
+For **every** learning processed, determine its topic and update the relevant wiki page. This step is not optional — the wiki is how Claude (and the user) sees current truth in future sessions, and skipping it loses the benefit.
 
 ```
 Learning: "Redis TTL should be 30 min not 15"
-  → Topic: caching
-  → Wiki page: .claude/wiki/caching-patterns.md
+  → Topic: redis-cache
+  → Wiki page: .claude/wiki/redis-cache.md
   → Action: UPDATE (replace "15 min" with "30 min" if it exists, or add new entry)
 ```
 
-- If `.claude/wiki/` exists → update relevant pages, create new pages for new topics
-- If `.claude/wiki/` doesn't exist → create it with `index.md` + first pages
+- If `.claude/wiki/` exists → update relevant pages, create new pages for topics that don't have one yet
+- If `.claude/wiki/` doesn't exist → run `/wiki init` first (creates scaffold), then proceed
 - Update `index.md` with any new pages
 - Update cross-references between related pages
-- Wiki pages reflect **current truth** — if something changed, old info is replaced, not appended
+- Wiki pages reflect **current truth** — if a fact changed, old info is replaced, not appended (see [wiki skill](../wiki/skill.md) for page format and rules)
 
-### 8. Push Team Repo
+### 8. Sync Docs (for doc-impact markers)
 
-If any team repo files were modified (children, rules, agent.md, known-issues):
+When processing in marker mode, scan each marker's `doc-impact` field:
 
-```bash
-cd ~/.claude/repos/agentteamland/{team-name}
-git add -A
-git commit -m "learn: {short summary of all learnings}"
-git push
-```
+| `doc-impact` value | Action |
+|---|---|
+| `none` (or missing) | Skip — no doc work needed |
+| `readme` | Prepare a draft `README.md` update in the affected repo(s) |
+| `docs` | Prepare a draft update to the doc site (e.g., `repos/docs/site/...`) including bilingual mirrors if present |
+| `both` | Prepare drafts for both README and doc site |
+| `breaking` | Prepare drafts for README, doc site, AND a `CHANGELOG.md` / migration-note entry |
 
-### 8. Write to Journal
+Drafts are **not auto-pushed to public repos**. They are either:
+
+- Applied locally in the workspace so the user can review the diff before committing
+- Or, if the workspace is read-only in this context, surfaced as a bulleted "proposed changes" list in the final report
+
+See [docs-sync rule](../../rules/docs-sync.md) for what qualifies as user-facing and how bilingual mirrors are handled.
+
+If in manual mode (no markers), skip this step — manual `/save-learnings` focuses on knowledge capture; docs updates happen in the turn the change is made (Phase 1 of docs-sync).
+
+### 9. Write to Journal
 
 File: `.claude/journal/{date}_{agent-name}.md`
 
@@ -154,19 +172,36 @@ tags: [learning, {categories}]
 - {cross-cutting information if any}
 ```
 
-### 9. Report to User
+### 10. Push Team Repo
+
+If any team repo files were modified (children, rules, agent.md, known-issues) — after wiki, docs-sync, and journal all wrote their outputs:
+
+```bash
+cd ~/.claude/repos/agentteamland/{team-name}
+git add -A
+git commit -m "learn: {short summary of all learnings}"
+git push
+```
+
+**Project-local changes** (`.claude/wiki/`, `.claude/agent-memory/`, `.claude/journal/`) are committed in the project repo if one exists, but pushing them is the project's responsibility, not this skill's.
+
+**Doc-impact drafts** prepared in step 8 are **never auto-committed to public repos** — they wait for review.
+
+### 11. Report to User
 
 Show a brief summary of everything that was done:
 
 ```
 📝 Learnings saved:
+  • Markers processed: 3 (2 decision, 1 bug-fix)
   • Project memory: 3 entries added
-  • Wiki: 2 pages updated (caching-patterns.md, ef-core-setup.md)
-  • Wiki: 1 new page created (batch-processing.md)
+  • Wiki: 2 pages updated (redis-cache.md, auth.md)
+  • Wiki: 1 new page created (rate-limiting.md)
   • Team repo: 1 children file updated (caching-strategy.md)
   • New rule created: "batch-imports-use-bulk-insert" (team)
   • Journal entry written
-  • Team repo pushed (v1.1.0)
+  • Docs drafts: 1 README draft in core/ awaiting review
+  • Team repo pushed (v1.3.1)
 ```
 
 One block, no interaction, conversation continues (or ends).
@@ -177,7 +212,7 @@ One block, no interaction, conversation continues (or ends).
 2. **Auto-create is safe.** New children files, rules, and skills don't break anything — they add knowledge.
 3. **Git push is automatic.** Team repo changes are committed and pushed immediately.
 4. **Sensitive information filter.** Passwords, tokens, secrets, API keys are NEVER written anywhere.
-5. **Append, never overwrite.** Existing files get new content appended, never replaced.
+5. **Append for memory/journal, replace for wiki.** Memory and journal are historical (append-only). Wiki is current truth (old facts get replaced). Doc drafts (step 8) are never auto-committed to public repos.
 6. **De-duplicate.** Check if a similar learning already exists before adding. Don't create duplicate children or rules.
 7. **Skill creation threshold.** Only create a skill when the same workflow pattern appears 2+ times. One-time procedures go to memory, not skills.
 8. **Rule creation criteria.** Only create a rule when a clear "always do X" or "never do Y" convention is established. Observations go to memory, conventions go to rules.

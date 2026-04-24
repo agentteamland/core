@@ -1,7 +1,7 @@
 ---
 name: wiki
-description: "Project knowledge base — living, cross-referenced, always current. Ingest new knowledge, query existing, lint for staleness. Powered by Karpathy's LLM Wiki pattern."
-argument-hint: "<ingest|query|lint> [topic or question]"
+description: "Project knowledge base — living, cross-referenced, always current. Initialize, ingest new knowledge, query existing, lint for staleness. Powered by Karpathy's LLM Wiki pattern."
+argument-hint: "<init|ingest|query|lint> [topic or question]"
 ---
 
 # /wiki Skill
@@ -22,7 +22,57 @@ The wiki answers: "What is the current truth about X in this project?"
 └── ...
 ```
 
-## Three Modes
+## Four Modes
+
+### `init` Mode
+
+**Usage:** `/wiki init` (no argument)
+
+Scaffolds `.claude/wiki/` in the current project. Safe to re-run — it's a no-op if the wiki is already initialized.
+
+**Process:**
+
+1. Check for `.claude/wiki/` directory.
+   - Does not exist → create it.
+   - Exists with `index.md` containing the initialized template → **idempotent no-op**, print `wiki: already initialized (N pages)` and exit.
+   - Exists but empty or missing `index.md` → treat as not-yet-initialized and continue.
+2. Create `.claude/wiki/index.md` with this template:
+
+   ```markdown
+   # Project Wiki
+
+   > Current truth about this project — maintained automatically from `<!-- learning -->` markers via `/save-learnings`, or manually via `/wiki ingest`.
+
+   ## Pages
+
+   (none yet — pages appear here as knowledge accumulates)
+
+   ## Health
+
+   - Last ingest: never
+   - Last lint: never
+
+   ## How this works
+
+   - **Content flows in** from inline learning markers captured at session end (`atl learning-capture`), plus any manual `/save-learnings` or `/wiki ingest` invocation.
+   - **Pages are topic-based** (one concept per page) and reflect current truth — old facts get replaced, not appended.
+   - **Run `/wiki query <question>`** to search wiki content.
+   - **Run `/wiki lint`** periodically to catch stale / orphan / contradicting pages.
+   ```
+
+3. Report one-line status: `wiki initialized at .claude/wiki/ (ready for ingest)`
+
+**When init fires automatically:**
+
+- First session of a project where the user has `atl setup-hooks` installed but the project has no `.claude/wiki/` yet — the `SessionStart` hook invokes `/wiki init` as part of the wiki-bootstrap step.
+- Manual: user runs `/wiki init` directly.
+
+**What init does NOT do:**
+
+- It does not ingest existing knowledge sources. Use `/wiki ingest` for that after init.
+- It does not create topic pages. Pages are created by `ingest` or `save-learnings` when content exists.
+
+---
 
 ### `ingest` Mode
 
@@ -31,11 +81,12 @@ The wiki answers: "What is the current truth about X in this project?"
 Scans all project knowledge sources and updates wiki pages:
 
 **Sources scanned:**
-1. `.claude/agent-memory/*.md` — agent learnings
-2. `.claude/journal/*.md` — inter-agent notes
-3. `.claude/docs/*.md` — finalized decisions from brainstorms
-4. `.claude/brain-storms/*.md` (completed only) — decision context
-5. Recent conversation context — what was just discussed/built
+1. `<!-- learning -->` markers in the current session transcript — primary source, see [learning-capture rule](../../rules/learning-capture.md)
+2. `.claude/agent-memory/*.md` — agent learnings
+3. `.claude/journal/*.md` — inter-agent notes
+4. `.claude/docs/*.md` — finalized decisions from brainstorms
+5. `.claude/brain-storms/*.md` (completed only) — decision context
+6. Recent conversation context — what was just discussed/built
 
 **Process:**
 1. Read all sources
@@ -132,15 +183,25 @@ Auto-fixable issues are fixed silently. Contradictions and stale content are rep
 
 ## Integration with Other Systems
 
-### /save-learnings → Wiki
+### Learning markers → /save-learnings → Wiki
 
-When `/save-learnings` runs, it also updates relevant wiki pages:
+The normal flow when `atl setup-hooks` is installed:
+
+1. Claude drops `<!-- learning topic=... -->` markers inline during the conversation (per [learning-capture](../../rules/learning-capture.md) rule)
+2. Session end / PreCompact → `atl learning-capture` scans transcript for markers
+3. If markers found → `/save-learnings` runs on the marked regions
+4. `/save-learnings` updates agent-memory (append), journal, and wiki pages (replace/update)
+
+Example propagation:
 
 ```
-Learning: "Redis cache TTL should be 30 min, not 15"
-  → agent-memory: append historical note
-  → wiki/caching-patterns.md: UPDATE "TTL is 30 minutes" (replace old "15 minutes")
+<!-- learning topic: redis-cache; body: TTL should be 30 min, not 15 -->
+  → agent-memory: append historical note with date
+  → wiki/redis-cache.md: UPDATE "TTL is 30 minutes" (replace old "15 minutes")
+  → journal/{date}_{agent}.md: cross-agent summary entry
 ```
+
+Without markers (or without hooks), manual `/wiki ingest` and manual `/save-learnings` still work.
 
 ### Agent Startup → Wiki
 

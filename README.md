@@ -1,15 +1,19 @@
 # 🧬 Agent Workshop Core
 
-Core infrastructure for all agent teams. Provides the memory system, journal, learning pipeline, agent structure rules, and automatic version checking.
+Core infrastructure for all agent teams. Provides the memory system, journal, wiki, learning pipeline (inline markers + hook-driven capture), agent structure rules, docs-sync discipline, and automatic version checking.
 
 ## What's Inside
 
 | Type | File | Purpose |
 |------|------|---------|
-| Skill | `skills/save-learnings/` | Save what was learned in a session — project memory, team repo, or both |
-| Rule | `rules/memory-system.md` | Memory & journal system rules (auto-loaded every session) |
+| Skill | `skills/save-learnings/` | Save what was learned — project memory, **wiki (mandatory)**, team repo, journal; prepares doc drafts for `doc-impact` markers |
+| Skill | `skills/wiki/` | Living project knowledge base (init, ingest, query, lint) |
+| Skill | `skills/create-code-diagram/` | Generate a full-project Mermaid class diagram |
+| Rule | `rules/memory-system.md` | 4-layer knowledge model (memory, journal, wiki, docs) + agent startup routine |
 | Rule | `rules/agent-structure.md` | Agent configuration rules (children pattern, blueprint pattern) |
-| Rule | `rules/version-check.md` | Automatic version checking on every prompt |
+| Rule | `rules/version-check.md` | Automatic version checking on every prompt (hook-driven) |
+| Rule | `rules/learning-capture.md` | Inline `<!-- learning -->` marker protocol — cheap, greppable, hook-processed |
+| Rule | `rules/docs-sync.md` | Proactive docs sync: README / doc-site updates in the same turn as user-facing changes |
 | Rule | `rules/karpathy-guidelines.md` | Four coding principles (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) |
 | Template | `templates/agent-memory.md` | Template for per-project agent memory files |
 | Template | `templates/journal-entry.md` | Template for inter-agent journal entries |
@@ -33,23 +37,37 @@ Team Repo (global knowledge)                    Project Memory (project-specific
 ### Session Lifecycle
 
 ```
-Session Start:
-  1. Auto version check (silent git fetch/pull if behind)
+Session Start (SessionStart hook):
+  1. atl update --silent-if-clean  (auto-update cached repos)
   2. Agent reads its definition (from project .claude/agents/)
-  3. Agent reads project memory (.claude/agent-memory/)
-  4. Agent reads recent journal entries (.claude/journal/)
+  3. Agent reads relevant wiki pages (.claude/wiki/)
+  4. Agent reads project memory (.claude/agent-memory/)
+  5. Agent reads recent journal entries (.claude/journal/)
 
 Session Work:
-  (normal work happens)
+  (normal conversation)
+  When a learning moment occurs → agent drops an inline <!-- learning --> marker
+  in its response. If the change is user-facing → docs-sync rule prompts the
+  agent to update README / doc site in the same turn, or mark doc-impact on
+  the learning marker for session-end processing.
 
-Session End:
-  /save-learnings (MANDATORY — agent proactively checks)
-  1. Analyzes what was learned
-  2. Asks user: project-specific or global?
-  3. Writes to project memory and/or team repo
-  4. Auto git push if team repo updated
-  5. Writes journal entry for other agents
+Session End / PreCompact (SessionEnd + PreCompact hooks):
+  1. atl learning-capture --silent-if-empty  (scans transcript for markers)
+     - 0 markers → silent exit (zero tokens)
+     - 1+ markers → report injected into context for /save-learnings to process
+  2. /save-learnings --from-markers
+     - Updates agent-memory (append)
+     - Updates wiki pages (MANDATORY; replace/update — current truth)
+     - Writes journal entry
+     - Prepares doc drafts for doc-impact markers (never auto-pushed)
+     - Commits + pushes team repo changes if any
 ```
+
+The mechanism is split between:
+- **`rules/learning-capture.md`** — inline marker protocol (what you drop and when)
+- **`rules/docs-sync.md`** — proactive docs discipline (paired with learning-capture via `doc-impact`)
+- **`atl learning-capture`** (CLI) — greps the transcript for markers; runs at hook time
+- **`/save-learnings --from-markers`** — processes marker bodies into wiki + memory + drafts
 
 ### Automatic Version Check
 

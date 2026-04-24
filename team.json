@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "name": "core",
-  "version": "1.2.0",
-  "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, version check, learning pipeline, schema definitions",
+  "version": "1.3.0",
+  "description": "Core infrastructure for all AgentTeamLand teams — memory system, journal, wiki, version check, learning pipeline (inline markers + hook-driven capture), docs-sync, schema definitions",
   "author": {
     "name": "AgentTeamLand",
     "url": "https://github.com/agentteamland"
@@ -13,20 +13,22 @@
   "homepage": "https://github.com/agentteamland",
   "agents": [],
   "skills": [
-    { "name": "save-learnings", "description": "Save end-of-conversation learnings to project memory, team repo, and journal" },
+    { "name": "save-learnings", "description": "Save end-of-conversation learnings to project memory, wiki (mandatory), team repo, and journal; prepares doc drafts for doc-impact markers" },
     { "name": "create-code-diagram", "description": "Generate full project Mermaid class diagram" },
-    { "name": "wiki", "description": "Living project knowledge base (ingest, query, lint)" }
+    { "name": "wiki", "description": "Living project knowledge base (init, ingest, query, lint)" }
   ],
   "rules": [
     { "name": "memory-system", "description": "4-layer knowledge model (memory, journal, wiki, docs)" },
     { "name": "agent-structure", "description": "Children pattern + Knowledge Base + Blueprint pattern for agents" },
     { "name": "version-check", "description": "Auto-pull agentteamland repos on every prompt" },
-    { "name": "karpathy-guidelines", "description": "Four coding principles (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) — reduce LLM coding mistakes" }
+    { "name": "karpathy-guidelines", "description": "Four coding principles (Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution) — reduce LLM coding mistakes" },
+    { "name": "learning-capture", "description": "Inline <!-- learning --> marker protocol: drop markers when learning moments occur; session-end hook (atl learning-capture) scans and processes them" },
+    { "name": "docs-sync", "description": "Proactive docs sync: when user-facing behavior changes, update README / doc site in the same turn (or mark doc-impact for session-end backstop)" }
   ],
   "extends": null,
   "excludes": [],
   "dependencies": {},
   "requires": {
-    "atl": ">=0.1.0"
+    "atl": ">=0.2.0"
   }
 }

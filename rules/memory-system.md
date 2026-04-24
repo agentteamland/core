@@ -44,10 +44,11 @@ The project's living knowledge base. Unlike memory (historical) or docs (static 
 
 **Rules:**
 - Organized by topic, not by date (one page per concept)
-- Updated by `/save-learnings` and `/wiki ingest` automatically
+- Updated from `<!-- learning -->` markers via `/save-learnings` (driven by session-end hook when `atl setup-hooks` is installed; manual via `/wiki ingest` or `/save-learnings` otherwise)
 - Pages reflect what is true NOW — old info is replaced, not appended
 - Cross-referenced: related pages link to each other
 - `index.md` auto-maintained as table of contents
+- Bootstrap: run `/wiki init` in a project without `.claude/wiki/` to scaffold it
 - Lint with `/wiki lint` periodically
 
 **Difference from other layers:**
@@ -70,21 +71,14 @@ At the start of every conversation, the agent should read the following files (i
 
 **Wiki reading strategy:** Agent does NOT read all wiki pages. It reads `index.md` first, then only pages relevant to the current task or its domain (e.g., API Agent reads auth, caching, database pages — not flutter or react pages).
 
-## End of Conversation Routine
+## End of Conversation Routine — now hook-driven
 
-**MANDATORY:** Before the conversation ends, proactively check if anything was learned. Do NOT wait for the user to ask — the user may forget. This is YOUR responsibility.
+Capture at session end is no longer a prose-instruction "remember to save" asked of the agent. The mechanism moved to inline markers + a harness-owned hook:
 
-When the conversation involved any of the following, learnings MUST be saved:
-- A bug was found and fixed
-- A new pattern or approach was discovered
-- Something didn't work and a workaround was applied
-- A decision was made that affects future development
-- A tool, library, or configuration behaved unexpectedly
+- **During conversation:** when you identify a learning moment, drop a `<!-- learning -->` marker. See [learning-capture.md](learning-capture.md) for the exact format.
+- **At session end / PreCompact:** `atl learning-capture` scans the transcript, runs `/save-learnings` only on marked regions, and prepares doc-impact drafts.
+- **When a change is user-facing:** in the same turn, also update the matching README / doc-site page. See [docs-sync.md](docs-sync.md).
 
-**Process:**
-1. Before ending, ask the user: "I learned some things in this session. Should I save them?"
-2. List what was learned (briefly)
-3. If approved, write to project memory, team repo (if general), and journal
-4. If team repo updated, auto git push
+This replaces the earlier "ask the user at session end" dance — the hook is deterministic, cheaper (zero cost when no markers exist), and doesn't rely on Claude remembering an unstructured prose rule.
 
-If nothing was learned (simple Q&A, no development work), skip silently — don't ask unnecessarily.
+If the hook is not installed (`atl setup-hooks` not run), markers still get captured into the transcript but are not processed automatically. The user can run `/save-learnings` manually at any time.
