@@ -69,11 +69,16 @@ git commit -m "<conventional message>"
 git push -u origin <branch-name>
 gh pr create \
   --title "<type>(<scope>): <summary>" \
-  --body  "<see PR body template below>" \
-  --assignee @me      # ← ALWAYS assign the authenticated user (the maintainer)
+  --body  "<see PR body template below>"
 ```
 
-**Assignee is mandatory.** Every PR Claude opens must have the maintainer as assignee so it shows up on their dashboard for review. Use `--assignee @me` at PR creation time (resolves to the `gh auth`ed user). If you forget, fix it immediately with `gh pr edit <N> --add-assignee @me`.
+**Do NOT add `--assignee` or `--reviewer` on your own PRs.** In the current solo-maintainer setup, Claude pushes under the maintainer's GitHub account (`mkurak`), which makes the maintainer the PR author automatically. That's enough:
+
+- Author field already surfaces the PR in the maintainer's "Created by me" and "Involves me" dashboards
+- Explicit `--assignee @me` is redundant (author == assignee) and pollutes the "Assigned to me" queue with your own PRs
+- GitHub blocks requesting review from the PR author, so `--add-reviewer mkurak` silently fails on our own PRs
+
+(When / if a separate bot account is set up for Claude's pushes — so author ≠ maintainer — then `--reviewer mkurak` becomes possible and appropriate. That is future work, not current policy.)
 
 **PR body template:**
 
@@ -118,8 +123,8 @@ Even when:
 
 ### What IS allowed on PRs
 
-- `gh pr create` — open PRs (always include `--assignee @me`)
-- `gh pr edit` — fix typos in title/body, add/remove labels, add assignees
+- `gh pr create` — open PRs (no `--assignee` or `--reviewer` for Claude's own PRs in solo-maintainer setup; see section 4)
+- `gh pr edit` — fix typos in title/body, add/remove labels
 - `gh pr list` / `gh pr view` / `gh pr diff` / `gh pr checkout` — read-only inspection
 - `gh pr review --comment` — leave a feedback comment (but NOT approve, NOT request-changes)
 
