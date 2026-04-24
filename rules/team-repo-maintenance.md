@@ -67,8 +67,13 @@ git checkout -b <fix|feat|chore>/<short-description>
 git add <files>
 git commit -m "<conventional message>"
 git push -u origin <branch-name>
-gh pr create --title "<type>(<scope>): <summary>" --body "<see PR body template below>"
+gh pr create \
+  --title "<type>(<scope>): <summary>" \
+  --body  "<see PR body template below>" \
+  --assignee @me      # ← ALWAYS assign the authenticated user (the maintainer)
 ```
+
+**Assignee is mandatory.** Every PR Claude opens must have the maintainer as assignee so it shows up on their dashboard for review. Use `--assignee @me` at PR creation time (resolves to the `gh auth`ed user). If you forget, fix it immediately with `gh pr edit <N> --add-assignee @me`.
 
 **PR body template:**
 
@@ -89,23 +94,76 @@ gh pr create --title "<type>(<scope>): <summary>" --body "<see PR body template 
 
 Surface the PR URL to the user. They review on GitHub and click merge. For solo maintainer flow, approvals are not required (count: 0) — the PR exists as **ceremony + audit trail**, not as external gate.
 
-## Escape hatches
+## 🚫 PR merge discipline — absolute, no exceptions
 
-### Admin bypass (emergency only)
+**Claude never merges pull requests.** This is non-negotiable and has no scope limit.
 
-Branch protection allows admin to push directly when `enforce_admins` is false (our default). Use this only when:
+The prohibition covers any action that lands a PR on `main`:
+
+- `gh pr merge` in any form (`--squash`, `--rebase`, `--merge`)
+- `gh pr review --approve`
+- Clicking "Merge pull request" via any MCP-driven browser (Chrome / computer-use)
+- Any equivalent server-side action through the GitHub REST / GraphQL API
+
+Even when:
+
+- The PR is trivial (one-line typo, formatting fix, broken link)
+- `required_approving_review_count` is 0 (solo maintainer)
+- The PR was authored by Claude itself
+- The user said "push this" or "yapalım" earlier in the conversation
+- Branch protection would allow admin bypass
+- The maintainer is unreachable and a hotfix feels urgent
+
+→ The answer is **still no**. Merging belongs to the human reviewer. If something is genuinely urgent, surface the PR URL and tell the user plainly that it's blocking — they click merge in 10 seconds.
+
+### What IS allowed on PRs
+
+- `gh pr create` — open PRs (always include `--assignee @me`)
+- `gh pr edit` — fix typos in title/body, add/remove labels, add assignees
+- `gh pr list` / `gh pr view` / `gh pr diff` / `gh pr checkout` — read-only inspection
+- `gh pr review --comment` — leave a feedback comment (but NOT approve, NOT request-changes)
+
+### What is NOT allowed
+
+- Merging (see above)
+- Approving (`--approve`)
+- Requesting changes on someone else's PR (`--request-changes`)
+- Closing (`gh pr close`) — destructive; only the author or user closes PRs
+- Reopening a closed PR without explicit user instruction
+
+### Handoff after opening a PR
+
+After `gh pr create` succeeds, surface the URL and stop on that PR:
+
+> PR açıldı: https://github.com/.../pull/N — review edip merge ettiğinde söyle, devam ederim.
+
+Do not wait on CI to auto-merge on green. Do not self-approve. Do not re-invoke `gh pr merge` "because nothing has happened for 5 minutes." The merge action is the user's signal that they've reviewed; skipping that signal destroys the gate.
+
+## Escape hatches (direct push only, never auto-merge)
+
+### Admin bypass for direct push (emergency only)
+
+Branch protection allows admin to push directly when `enforce_admins` is false (our default). This is the ONLY form of PR-flow bypass — and it pushes a commit, not a merge. Use only when:
 
 - Release-pipeline-breaking issue blocks `brew upgrade atl` / `scoop install atl`
 - A revert must land within minutes to stop a public regression
+- The maintainer explicitly instructs: "push directly, no PR"
 
 When using this, still:
 - Bump version
 - Use conventional commit
 - Follow up with a retrospective: `chore(postmortem): ...` commit or issue
 
-### Trivial direct commit
+The user-side expectation: admin bypass is *their* tool. Claude does not initiate it.
 
-Some changes are too small for PR ceremony — fixing a typo, re-running `gofmt`, correcting a broken link. For these, you *can* create a one-file PR with title `chore: <trivial-thing>` and self-merge instantly. **You cannot direct-push** (branch protection refuses) but the minimal PR is cheap.
+### Trivial changes still go through PR
+
+Even for the smallest change — a typo, a broken link, a `gofmt` run — the path is:
+
+1. Feature branch → commit → push → `gh pr create --assignee @me`
+2. User reviews, clicks merge
+
+There is no "too small for PR" category. The PR ceremony is cheap (30 seconds of work); the review gate catches mistakes that looked trivial but weren't.
 
 ## What this rule does NOT cover
 
