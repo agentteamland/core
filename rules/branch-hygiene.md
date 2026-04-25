@@ -91,7 +91,7 @@ Outside workspace (e.g., in a project that imports a team), the agent uses the m
 
 ## Anti-patterns
 
-- ❌ "Branch görünüyor, herhalde main'dir" without `git branch --show-current` confirmation
+- ❌ "Probably on main" — proceeding without `git branch --show-current` confirmation
 - ❌ Running `atl update` and assuming it caught all stale branches (it doesn't)
 - ❌ Skipping the local validator because "this change is too small to need it"
 - ❌ Auto-deleting local branches without user signal — harmless to leave; risky to delete
