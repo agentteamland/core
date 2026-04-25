@@ -49,14 +49,49 @@ When you edit `team.json`, follow the established format:
 1. **Pretty-print, multi-line objects** with 2-space indent. Each agent / skill / keyword on its own line.
 2. **`\u2014` Unicode escape for em-dash characters** in description strings (instead of literal `—`).
 
-This convention came from `python -m json.tool`'s defaults (used in design-system-team PR #1, 2026-04-25) and stuck. Validate after editing:
+This convention came from `python -m json.tool`'s defaults (used in design-system-team PR #1, 2026-04-25) and stuck. Reformat:
 
 ```bash
-python3 -m json.tool team.json > /dev/null   # validate
-python3 -m json.tool team.json > tmp && mv tmp team.json   # reformat to convention
+python3 -m json.tool team.json > tmp && mv tmp team.json
 ```
 
 When a feature branch and main both edit `team.json` and conflict over format (e.g., compact vs pretty-print), **adopt main's format and re-apply the feature branch's content on top**. Don't fight the convention — fold into it.
+
+#### Validate `team.json` BEFORE pushing — non-negotiable
+
+Schema constraints (defined in `core/schemas/team.schema.json`):
+
+| Field | Rule |
+|---|---|
+| `description` (top-level) | 10–200 chars |
+| `agents[*].description`, `skills[*].description`, `rules[*].description` | max 200 chars |
+| `name` (top-level + agents/skills/rules) | kebab-case pattern `^[a-z][a-z0-9-]*$` |
+| `keywords[*]` | 1–40 chars, max 20 keywords, unique |
+| `version` | strict SemVer `MAJOR.MINOR.PATCH` |
+
+The 200-char description maxLength has bitten three times in production (commits d430d13, 6630157, and PR core#2's first push). Each time the fix was a follow-up "trim description" commit. **No more.**
+
+**Before every push that touches a `team.json`, run:**
+
+```bash
+~/.claude/repos/agentteamland/core/scripts/validate-team-json.sh path/to/team.json
+```
+
+Or from inside the core repo:
+
+```bash
+./scripts/validate-team-json.sh team.json
+```
+
+The script does a quick length check using only Python stdlib (always available) AND, if `ajv-cli` is on PATH, runs the full `ajv validate` that the CI runs — so you get parity with what GitHub Actions will check. CI failure on a missed length check costs more time than the 2-second local run.
+
+If you don't have `ajv-cli` installed and want full parity:
+
+```bash
+npm install -g ajv-cli ajv-formats   # one-time
+```
+
+Even without ajv, the script's Python length check catches the constraint that has historically failed. Run it. Always.
 
 ### 2. Conventional commit format
 
